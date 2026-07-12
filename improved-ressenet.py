@@ -1,38 +1,4 @@
-# ======================================================================
-# ĐỒ ÁN CUỐI KỲ - MÔN CƠ SỞ VÀ ỨNG DỤNG AI
 # Đề tài: Phân loại ảnh tổng quát (General Image Classification)
-# Kiến trúc đề xuất: ImprovedResSENet
-# Nhóm: 05
-# ======================================================================
-#
-# Mô hình do nhóm tự thiết kế, không sao chép kiến trúc baseline mẫu
-# (BasicCNN) mà giảng viên cung cấp. Kiến trúc kết hợp 3 kỹ thuật cải
-# tiến hiện đại (đúng yêu cầu mục 6.3 của đề bài):
-#
-#   1) Depthwise Separable Convolution: tách 1 phép tích chập thông
-#      thường thành 2 bước nhỏ (depthwise + pointwise), giúp giảm đáng
-#      kể số lượng tham số cần huấn luyện.
-#   2) Residual Connection (kết nối tắt): cộng trực tiếp đầu vào gốc
-#      của mỗi khối vào đầu ra, giúp gradient lan truyền tốt hơn qua
-#      các tầng sâu, hạn chế hiện tượng suy giảm gradient, giúp huấn
-#      luyện hội tụ ổn định hơn.
-#   3) SE-Attention (Squeeze-and-Excitation): cơ chế chú ý theo kênh,
-#      giúp mô hình tự học cách tập trung vào những kênh đặc trưng
-#      quan trọng nhất cho việc phân loại (ví dụ phân biệt vệt loang
-#      khô và đốm tròn giữa các lớp lá bệnh khác nhau trong dataset).
-#
-# ======================================================================
-# HƯỚNG DẪN CHẠY TRÊN KAGGLE:
-#
-#   1. Add Input dataset "Data_CLC_Classification" (tác giả huynhthethien)
-#      vào notebook trước khi chạy.
-#   2. Bật GPU: Settings > Accelerator > GPU T4 x2, để quá trình huấn
-#      luyện không bị chậm.
-#   3. Cell huấn luyện (Cell 5) là cell tốn thời gian nhất, khoảng
-#      25-30 phút trên GPU T4 - không tắt tab khi đang chạy.
-# ======================================================================
-
-
 # ==========================================================================
 # CELL 1 - CẤU HÌNH HẰNG SỐ, THIẾT BỊ VÀ CỐ ĐỊNH SEED
 # ==========================================================================
@@ -56,7 +22,7 @@ import seaborn as sns                                              # vẽ confus
 
 # Cố định seed cho toàn bộ các nguồn sinh số ngẫu nhiên (Python, NumPy,
 # PyTorch CPU/GPU) để đảm bảo tính tái lập của kết quả, theo đúng yêu
-# cầu mục 7.4 của đề bài.
+
 SEED = 42
 
 def set_seed(seed):
@@ -79,10 +45,10 @@ def count_parameters(model):
 
 # Đường dẫn dataset trên Kaggle (đã kiểm tra khớp với dataset thật bằng
 # os.walk('/kaggle/input') trước khi chạy chính thức)
-DATA_DIR = "/kaggle/input/datasets/huynhthethien/data-clc-classification"
+DATA_DIR = "[]"
 
 # Cấu hình hằng số chính của mô hình
-IMAGE_SIZE = 256          # KHÔNG ĐƯỢC THAY ĐỔI - quy định bắt buộc mục 14.2.1
+IMAGE_SIZE = 256          
 NUM_CLASSES = 4           # 4 lớp: Class01, Class02, Class03, Class04
 BATCH_SIZE = 32           # số ảnh đưa vào mạng mỗi lần lặp
 EPOCHS = 40               # tổng số vòng lặp huấn luyện qua toàn bộ tập train
@@ -90,7 +56,7 @@ LEARNING_RATE = 1e-3      # tốc độ học ban đầu của optimizer AdamW
 WEIGHT_DECAY = 1e-4       # hệ số weight decay (L2 regularization), giúp chống overfitting
 VALID_RATIO = 0.2         # tỷ lệ trích tập validation để tự đánh giá nội bộ trong lúc làm
 
-GroupID = "05"            # số thứ tự nhóm, dùng để đặt tên file model khi export
+GroupID = "[]"          
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # tự chọn GPU nếu có, không thì dùng CPU
 print("Thiết bị đang sử dụng để huấn luyện:", DEVICE)   # in ra để kiểm tra đã nhận đúng GPU chưa
@@ -128,10 +94,7 @@ val_transform = transforms.Compose([
 # CELL 3 - NẠP DATASET VÀ CHIA TỶ LỆ TRAIN/VALIDATION
 # ==========================================================================
 # Đọc toàn bộ ảnh từ thư mục dataset (Class01-04), chia thành 80% để
-# huấn luyện và 20% để tự đánh giá nội bộ trong quá trình làm. Tỷ lệ này
-# chỉ phục vụ việc tự kiểm tra của nhóm, không phải kết quả chấm điểm
-# chính thức (giảng viên đánh giá trên tập test ẩn riêng).
-
+# huấn luyện và 20% để tự đánh giá nội bộ trong quá trình làm. 
 data_dir = Path(DATA_DIR)                          # chuyển đường dẫn dataset sang dạng Path để xử lý
 if not data_dir.exists():                            # kiểm tra thư mục dataset có thực sự tồn tại không
     raise FileNotFoundError(f"DATA_DIR không tồn tại: {data_dir}. "
@@ -145,9 +108,7 @@ class_names = full_train.classes                                              # 
 
 val_size = int(len(full_train) * VALID_RATIO)        # tính số ảnh dành cho tập validation (20%)
 train_size = len(full_train) - val_size              # số ảnh còn lại dành cho tập train
-
 # Cố định seed cho generator chia dữ liệu, đảm bảo cách chia train/val
-# giống nhau ở mọi lần chạy lại, phục vụ tính tái lập theo mục 7.4 đề bài.
 split_generator = torch.Generator().manual_seed(SEED)   # tạo bộ sinh số ngẫu nhiên riêng, cố định theo SEED
 train_indices, val_indices = random_split(
     range(len(full_train)), [train_size, val_size], generator=split_generator,
@@ -181,8 +142,7 @@ print("-" * 60)                                                                 
 # Kiến trúc gồm 4 khối cải tiến (ImprovedBlock) xếp nối tiếp, tăng dần
 # số kênh đặc trưng theo thứ tự 24 -> 48 -> 80 -> 112. Mỗi khối kết hợp
 # đồng thời 3 kỹ thuật hiện đại: depthwise separable convolution,
-# residual connection và SE-attention, đúng yêu cầu thể hiện cải tiến so
-# với kiến trúc CNN cơ bản theo mục 6.3 của đề bài.
+# residual connection và SE-attention.
 
 # ----- (1) Khối Squeeze-and-Excitation: cơ chế chú ý theo kênh -----
 class SEBlock(nn.Module):
@@ -496,20 +456,13 @@ plt.close()                                                                     
 print("\nĐã lưu 3 file ảnh: confusion_matrix_ImprovedResSENet.png, "
       "loss_curve_ImprovedResSENet.png, accuracy_curve_ImprovedResSENet.png")   # thông báo đã lưu xong các file ảnh
 
-# CELL 7 — XUẤT FILE MÔ HÌNH .pt ĐỂ NỘP BÀI (KHÔNG ĐƯỢC SỬA CELL NÀY)
+# CELL 7 — XUẤT FILE MÔ HÌNH .pt 
 # ==========================================================================
-# ###########################################
-# DO NOT MODIFY THIS SECTION
-# ###########################################
-# Cấu trúc câu lệnh trong khối này PHẢI giữ nguyên vẹn theo đúng quy định
-# bắt buộc mục 14.2.3 và 14.4 của đề bài - đây là khối lệnh chuẩn hóa,
-# giúp giảng viên load tự động hàng loạt file mô hình của các nhóm vào
-# hệ thống chấm điểm tự động.
 
 model.eval()
 example_input = torch.randn(1, 3, IMAGE_SIZE, IMAGE_SIZE).to(DEVICE)
 traced_model = torch.jit.trace(model, example_input)
 
-model_name = f"{GroupID}_DeepLearningProject_TrainedModel.pt"
+model_name = f"[]"
 traced_model.save(model_name)
 print("Model saved:", os.path.abspath(model_name))
